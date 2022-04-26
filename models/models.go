@@ -26,7 +26,7 @@ type House struct {
 	Area            *Area         `orm:"rel(fk)" json:"area_id"`                             //归属地的区域编号
 	Title           string        `orm:"size(64)" json:"title"`                              //房屋标题
 	Price           int           `orm:"default(0)" json:"price"`                            //单价,单位:分
-	Address         string        `orm:"size(512) orm:"default("")" json:"address"`          //地址
+	Address         string        `orm:"size(512)" orm:"default("")" json:"address"`         //地址
 	Room_count      int           `orm:"default(1)" json:"room_count"`                       //房间数目
 	Acreage         int           `orm:"default(0)" json:"acreage"`                          //房间总面积
 	Unit            string        `orm:"size(32)" orm:"default("")" json:"unit"`             //房屋单元,如几室几厅

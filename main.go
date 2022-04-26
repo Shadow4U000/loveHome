@@ -18,12 +18,14 @@ func TransparentsStatic(ctx *context.Context) {
 	http.ServeFile(ctx.ResponseWriter, ctx.Request, "static/html/"+ctx.Request.URL.Path)
 }
 
-func ignoreStatisPath() {
+func ignoreStaticPath() {
+
+	beego.SetStaticPath("group1/M00/", "fdfs/storage_data/data/")
 	beego.InsertFilter("/", beego.BeforeRouter, TransparentsStatic)
 	beego.InsertFilter("/*", beego.BeforeRouter, TransparentsStatic)
 }
 
 func main() {
-	ignoreStatisPath()
+	ignoreStaticPath()
 	beego.Run()
 }
