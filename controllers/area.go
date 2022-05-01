@@ -7,6 +7,7 @@ import (
 	_ "github.com/astaxie/beego/cache/redis"
 	"github.com/astaxie/beego/orm"
 	"loveHome/models"
+	"loveHome/utils"
 	"time"
 )
 
@@ -30,7 +31,13 @@ func (c *AreaController) GetArea() {
 
 	var areas []models.Area
 	//从redis缓存中拿数据
-	cache_conn, err := cache.NewCache("redis", `{"key":"lovehome","conn":":6379","dbNum":"0"}`)
+	redis_config_map := map[string]string{
+		"key":   "lovehome2",
+		"conn":  utils.G_redis_addr + ":" + utils.G_redis_port,
+		"dbNum": utils.G_redis_dbnum,
+	}
+	redis_config, _ := json.Marshal(redis_config_map)
+	cache_conn, err := cache.NewCache("redis", string(redis_config))
 
 	if areaData := cache_conn.Get("area"); nil != areaData {
 		//var area_info interface{}
@@ -68,7 +75,7 @@ func (c *AreaController) GetArea() {
 		return
 	}
 	beego.Info("areas =", areas)
-	cache_conn.Put("area", json_str, time.Second*10)
+	cache_conn.Put("area", json_str, time.Second*3600)
 
 	//打包或json返回给前端
 	beego.Info("query data success,resp=", resp, "num=", num)

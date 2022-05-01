@@ -1,8 +1,10 @@
 package models
 
 import (
+	"github.com/astaxie/beego"
 	"github.com/astaxie/beego/orm"
 	_ "github.com/go-sql-driver/mysql"
+	"loveHome/utils"
 	"time"
 )
 
@@ -69,21 +71,21 @@ type HouseImage struct {
 }
 
 const (
-	ORDER_STATUS_WAIT_ACCEPT   = "WAIT_ACCEPT"  //待接单
-	ORDER_STATUS_WAIT_PAYMENT  = "WAIT_PAYMENT" //待支付
-	ORDER_STATUS_WAIT_PAID     = "PAID"         //已支付
-	ORDER_STATUS_WAIT_COMMENT  = "COMMENT"      //待评价
-	ORDER_STATUS_WAIT_COMPLETE = "COMPLETE"     //已完成
-	ORDER_STATUS_WAIT_CANCELED = "CANCELED"     //已取消
-	ORDER_STATUS_WAIT_REJECTED = "REJECTED"     //已拒单
+	ORDER_STATUS_WAIT_ACCEPT  = "WAIT_ACCEPT"  //待接单
+	ORDER_STATUS_WAIT_PAYMENT = "WAIT_PAYMENT" //待支付
+	ORDER_STATUS_PAID         = "PAID"         //已支付
+	ORDER_STATUS_WAIT_COMMENT = "COMMENT"      //待评价
+	ORDER_STATUS_COMPLETE     = "COMPLETE"     //已完成
+	ORDER_STATUS_CANCELED     = "CANCELED"     //已取消
+	ORDER_STATUS_REJECTED     = "REJECTED"     //已拒单
 )
 
 type OrderHouse struct {
 	Id          int       `json:"order_id"`               //订单编号
 	User        *User     `orm:"rel(fk)" json:"user_id"`  //下单的用户编号
 	House       *House    `orm:"rel(fk)" json:"house_id"` //预定的房间编号
-	Begin_data  time.Time `orm:"type(datetime)"`          //预定的起始时间
-	End_data    time.Time `orm:"type(datetime)"`          //预定的结束时间
+	Begin_date  time.Time `orm:"type(datetime)"`          //预定的起始时间
+	End_date    time.Time `orm:"type(datetime)"`          //预定的结束时间
 	Days        int       //预定总天数
 	House_price int       //房屋的单价
 	Amount      int       //订单总金额
@@ -92,6 +94,94 @@ type OrderHouse struct {
 	Ctime       time.Time `orm:"auto_now_add;type(datetime)" json:"ctime"`
 }
 
+func (this *House) To_house_info() interface{} {
+	house_info := map[string]interface{}{
+		"house_id":    this.Id,
+		"title":       this.Title,
+		"price":       this.Price,
+		"area_name":   this.Area.Name,
+		"img_url":     utils.AddDomain2Url(this.Index_image_url),
+		"room_count":  this.Room_count,
+		"order_count": this.Order_count,
+		"address":     this.Address,
+		"user_avatar": utils.AddDomain2Url(this.User.Avatar_url),
+		"ctime":       this.Ctime.Format("2006-01-02 15:04:05"),
+	}
+	return house_info
+}
+
+func (this *House) To_one_house_desc() interface{} {
+	house_desc := map[string]interface{}{
+		"hid":         this.Id,
+		"user_id":     this.User.Id,
+		"user_name":   this.User.Name,
+		"user_avatar": utils.AddDomain2Url(this.User.Avatar_url),
+		"title":       this.Title,
+		"price":       this.Price,
+		"address":     this.Address,
+		"room_count":  this.Room_count,
+		"acreage":     this.Acreage,
+		"unit":        this.Unit,
+		"capacity":    this.Capacity,
+		"beds":        this.Beds,
+		"deposit":     this.Deposit,
+		"min_days":    this.Min_days,
+		"max_days":    this.Max_days,
+	}
+
+	img_urls := []string{}
+	for _, v := range this.Images {
+		img_urls = append(img_urls, v.Url)
+	}
+	house_desc["img_urls"] = img_urls
+	facilities := []int{}
+	for _, v := range this.Facilities {
+		facilities = append(facilities, v.Id)
+	}
+	house_desc["facilities"] = facilities
+
+	comments := []interface{}{}
+	orders := []OrderHouse{}
+	o := orm.NewOrm()
+	order_num, err := o.QueryTable("order_house").Filter("house_id", this.Id).Filter("status", ORDER_STATUS_COMPLETE).OrderBy("-ctime").Limit(10).All(&orders)
+	if nil != err {
+		beego.Error("select orders comments error,err =", err, "house_id =", this.Id)
+	}
+	for i := 0; i < int(order_num); i++ {
+		o.LoadRelated(&orders[i], "User")
+		var username string
+		if "" == orders[i].User.Name {
+			username = "匿名用户"
+		} else {
+			username = orders[i].User.Name
+		}
+		comment := map[string]string{
+			"comment":   orders[i].Comment,
+			"user_name": username,
+			"ctime":     orders[i].Ctime.Format("2006-01-02 15:04:05"),
+		}
+		comments = append(comments, comment)
+
+	}
+	house_desc["comments"] = comments
+	return house_desc
+}
+
+func (this *OrderHouse) To_order_info() interface{} {
+	order_info := map[string]interface{}{
+		"order_id":   this.Id,
+		"title":      this.House.Title,
+		"img_url":    utils.AddDomain2Url(this.House.Index_image_url),
+		"start_date": this.Begin_date.Format("2006-01-02 15:04:05"),
+		"end_date":   this.End_date.Format("2006-01-02 15:04:05"),
+		"ctime":      this.Ctime.Format("2006-01-02 15:04:05"),
+		"days":       this.Days,
+		"amount":     this.Amount,
+		"status":     this.Status,
+		"comment":    this.Comment,
+	}
+	return order_info
+}
 func init() {
 	// set default database
 	orm.RegisterDataBase("default", "mysql", "root:s@be1n1ng@tcp(127.0.0.1:3306)/loveHome2?charset=utf8&loc=Local")

@@ -62,15 +62,12 @@ func (this *SessionController) Login() {
 
 	//3.与数据库匹配判断账号密码正确
 	o := orm.NewOrm()
-	user := models.User{Name: resp["mobile"].(string)}
-
-	qs := o.QueryTable("user")
-	err := qs.Filter("mobile", resp["mobile"].(string)).One(&user)
-
-	if err != nil {
+	//var user models.User
+	user := models.User{Mobile: resp["mobile"].(string)}
+	err_Query := o.QueryTable("user").Filter("mobile", resp["mobile"].(string)).One(&user)
+	if orm.ErrNoRows == err_Query {
 		resp["errno"] = models.RECODE_DATAERR
 		resp["errmsg"] = models.RecodeText(models.RECODE_DATAERR)
-		beego.Info("two")
 		return
 	}
 	if user.Password_hash != resp["password"] {
@@ -81,11 +78,12 @@ func (this *SessionController) Login() {
 	}
 
 	//4.添加session
-	this.SetSession("name", resp["mobile"])
-	this.SetSession("mobile", resp["mobile"])
+	this.SetSession("name", user.Name)
+	this.SetSession("mobile", user.Mobile)
 	this.SetSession("user_id", user.Id)
 
 	//5返回json数据给前端
 	resp["errno"] = models.RECODE_OK
 	resp["errmsg"] = models.RecodeText(models.RECODE_OK)
+	return
 }
